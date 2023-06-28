@@ -35,192 +35,18 @@ library(astroFns)
 ```
 
 # 1. EFFORT & COORDINATES
-## 1.1 SAMPLING EFFORT
-Here I will create the sampling effort for each Plant individual and plant Species 
-### 1. Read the data with sampling efforts 
-```{r }
-effort_yr1 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/sampling_effort_yr1/Video_yr1.csv")
-effort_yr2 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/sampling_effort_yr2/video_yr2.csv", sep=";")
-effort_cor_1 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/sampling_effort_yr1/Corema_1_dates.csv", sep=",")  
+## Load sampling effort and coordinates
+```{r}
+#Sampling effort at individual and species level
+effort_individual <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/effort_individual_level.csv")
 
-effort_jpho <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Datos Jorge - Juniperus/sampling_effort_CT_JP.csv", sep= ",")
+effort_species <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/effort_species.csv")
+
+#Coordinates
+coord <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Coordinates/plant_coordinates.csv")
   
-effort_plen <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/plen_adapted.csv")
 ```
 
-### 2. GROUP effort by PLANT species
-```{r }
-#SUMHAL YR1
-eff_sp_yr1 <- effort_yr1 %>%
-  mutate(Plant = str_replace_all(Deployment_ID, "A0","Calb0"), #Change individual Corema names
-         Plant = str_replace_all(Plant, "A1","Calb1"),
-         Plant = str_replace_all(Plant, "A2","Calb2"),
-         Plant = str_sub(Plant, start = 1L, end = 4)) %>%  #Substract Plant species name
-  group_by(Plant) %>%
-  summarise(effort_pl_sp = sum(Days))
-
-#SUMHAL YR2
-eff_sp_yr2 <- effort_yr2 %>%
-  mutate(Plant = str_sub(deployment, start = 1L, end = 4),
-         Plant = str_to_title(Plant)) %>%
-  group_by(Plant) %>%
-  summarise(effort_pl_sp = sum(num_days))
-  
-#COREMA_1
-eff_sp_cor_1 <- effort_cor_1 %>%
-   mutate(Plant = str_replace_all(Plant_ID, "A0","Calb0"), #Change individual Corema names
-          Plant = str_replace_all(Plant, "A1","Calb1"),
-          Plant = str_replace_all(Plant, "A2","Calb2"),
-          Plant = str_sub(Plant, start = 1L, end = 4)) %>%
-  group_by (Plant) %>%
-    summarise (effort_pl_sp = sum(num_days))
-
-#Juniperus Phoenicea
-eff_sp_jpho <- effort_jpho %>%
-  mutate(Plant = "Jpho") %>%
-  group_by(Plant)%>%
-  summarise(effort_pl_sp = sum(totaldays))
-  
-  
-#Pistacia lentiscus (sompling effort in Plen is refered to the ~ 2 hours that the GoPro are set divided by day, but only 12 hours because the study was focused only on birds)
-eff_sp_plen <- effort_plen %>%
-  mutate(Plant = "Plen") %>%
-  group_by(Plant) %>%
-  summarise(effort_pl_sp = sum(Days))
-
-#Bind each dataframe and group those Species that were sampled different years
-effort_species <- rbind(eff_sp_yr1, eff_sp_yr2, eff_sp_cor_1, eff_sp_jpho, eff_sp_plen) %>%
-  group_by(Plant) %>%
-  summarise(effort_pl_sp = sum(effort_pl_sp))   
-
-#write.csv(effort_species, "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/effort_species.csv")
-```
-
-### 3. Group effort by PLANT_ID
-
-```{r }
-#SUMHAL YR1
-eff_ind_yr1 <- effort_yr1 %>%
-  mutate(Plant_ID = str_replace_all(Deployment_ID, "A0","Calb0"), #Change individual Corema names
-         Plant_ID = str_replace_all(Plant_ID, "A1","Calb1"),
-         Plant_ID = str_replace_all(Plant_ID, "A2","Calb2"),
-         Plant_ID = str_remove_all(Plant_ID, "_"),
-         Plant_ID = str_sub(Plant_ID, start = 1L, end = 7)) %>%  #Substract Plant species name
-  group_by(Plant_ID) %>%
-  summarise(effort_ind = sum(Days))
-
-
-#SUMHAL YR2
-eff_ind_yr2 <- effort_yr2 %>%
-  mutate(Plant_ID = str_replace_all(deployment, "Oeur20","Oeur020"),
-         Plant_ID = str_replace_all(Plant_ID, "Oeur21","Oeur021"),
-         Plant_ID = str_replace_all(Plant_ID, "Olan_01","Olan001"),
-         Plant_ID = str_sub(Plant_ID, start = 1L, end = 7),
-         Plant_ID = str_to_title(Plant_ID)) %>%
-  group_by(Plant_ID) %>%
-  summarise(effort_ind = sum(num_days))
-
-#COREMA_1
-eff_ind_cor_1 <- effort_cor_1 %>%
-   mutate(Plant_ID = str_replace_all(Plant_ID, "A0","Calb0"), #Change individual Corema names
-          Plant_ID = str_replace_all(Plant_ID, "A1","Calb1"),
-          Plant_ID = str_replace_all(Plant_ID, "A2","Calb2"),
-          Plant_ID = str_sub (Plant_ID, start = 1L, end = 7)) %>%
-  group_by (Plant_ID) %>%
-    summarise (effort_ind = sum(num_days))
-
-#Juniperus Phoenicea
-eff_ind_jpho <- effort_jpho %>%
-  mutate(Plant_ID = str_replace_all(ind, "C", "Jpho"),
-         Plant_ID = str_replace_all(Plant_ID, "O", "Jpho"),
-         Plant_ID = str_replace_all(Plant_ID, "M", "Jpho")) %>%
-  group_by(Plant_ID)%>%
-  summarise(effort_ind = sum(totaldays))
-
-
-#Pistacia lentiscus (sompling effort in Plen is refered to the ~ 2 hours that the GoPro are set divided by day, but only 12 hours)
-eff_ind_plen <- effort_plen %>%
-  rename(Plant_ID = plant_ID) %>%
-  group_by(Plant_ID) %>%
-  summarise(effort_ind = sum(Days))
-
-
-#Bind each dataframe and group those Species that were sampled different years
-effort_ind <- rbind(eff_ind_yr1, eff_ind_yr2, eff_ind_cor_1, eff_ind_jpho, eff_ind_plen) %>%
-  group_by(Plant_ID) %>%
-  summarise(effort_ind = sum(effort_ind)) 
-
-#write.csv(effort_ind, "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/effort_individual_level.csv")
-```
-
-
-## 1.2 COORDINATES
-In this script we will give consistency and bind all the coordinates information for the 13 plant species selected for the datapaper. 
-```{r }
-#Sumhal coordinates - Include Corema coords (but not individual 25 -dont know why!?)
-coord_sumhal_yr1 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/Deployments_yr1.csv", sep=";") %>%
-  mutate(Plant_ID = str_remove_all(Deployment_ID, "_"),
-         Plant_ID = str_sub(Plant_ID, start = 1L, end = 7),
-         Plant_ID = str_replace_all(Plant_ID, "A0", "calb0"),
-         Plant_ID = str_replace_all(Plant_ID, "A1", "calb1"),
-         Plant_ID = str_replace_all(Plant_ID, "A2", "calb2"),
-         Plant_ID = str_to_lower(Plant_ID),
-         Long = as.numeric(Long),
-         Lat = as.numeric(Lat)) %>%
-  select(Plant_ID, Long, Lat) %>%
-  distinct()
-
-#sumhal_coordinates yr2
-coord_sumhal_yr2 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/Deployments_yr2.csv", sep=";") %>%
-  mutate(Plant_ID = str_remove_all(Deployment_ID, "_"),
-         Plant_ID = str_sub(Plant_ID, start = 1L, end = 7),
-         Plant_ID = str_to_lower(Plant_ID),
-         Long = as.numeric(Long),
-         Lat = as.numeric(Lat)) %>%
-  select(Plant_ID, Long, Lat) %>%
-  distinct()
-
-#Bind Sumhal yr1 and yr2 coordinates   
-coord_sumhal <- rbind(coord_sumhal_yr1, coord_sumhal_yr2) %>%
-  group_by(Plant_ID) %>%
-  summarise(Plant_ID = first(Plant_ID),
-            Long = first(Long),
-            Lat = first(Lat))
-
-
-#Corema coordinates
-  coord_cor <- read.csv("/Users/Pablo/Documents/GitHub/SUMHAL_WP5_fieldwork/SUMHAL_fieldwork_Corema_1/corema_coords.csv", sep=",") %>%
-  mutate(Plant_ID = str_replace_all(Name, "A","calb")) %>%
-    select(Plant_ID, X, Y) %>%
-    rename(Lat = Y, Long = X) %>%
-    mutate(Lat = as.numeric(Lat),
-           Long = as.numeric(Long)) %>%
-    filter(Plant_ID == "calb25")
-
-  
-#Jpho coordinates
-coord_jpho <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Datos Jorge - Juniperus/Juniper_coord.csv", sep =";") %>%
-  select(tree,  y_long, x_lat) %>% #select only location and name from all individuals
-  rename(Plant_ID = tree, Long = y_long, Lat = x_lat)%>%
-  mutate(Lat = str_c(substr(as.character(Lat), 1, 2), ".", substr(as.character(Lat), 3, nchar(as.character(Lat)))), #introduce a point for decimal degrees in lat and long
-         Long = str_c(substr(as.character(Long), 1, 2), ".", substr(as.character(Long), 3, nchar(as.character(Long))))) %>%
-  mutate(Plant_ID = str_replace_all(Plant_ID, "C", "jpho"),
-         Plant_ID = str_replace_all(Plant_ID, "O", "jpho"),
-         Plant_ID = str_replace_all(Plant_ID, "M", "jpho"),
-         Long = as.numeric(Long),
-         Lat = as.numeric(Lat))
-
-
-#Plen coordinates
-coord_plen <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Datos Elena - Pistacia/id_plant_coords_updated.csv",sep = ";") %>%
-  rename(Plant_ID = id_plant, Long = X_coord, Lat = Y_coord) %>%
-  mutate(Plant_ID = str_c("plen", Plant_ID, sep=""))
-  
-
-coordinates <- rbind(coord_sumhal, coord_cor, coord_jpho, coord_plen) 
-
-#write.csv(coordinates, "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/coordinates/coordinates_13_spp.csv")
-```
 
 
 # 2. DATA UNIFICATION
@@ -229,19 +55,19 @@ coordinates <- rbind(coord_sumhal, coord_cor, coord_jpho, coord_plen)
     Read the resulting CSV from Time-lapse visualization (after running the AI process). 
     Note that for fieldwork-YR1 there are 4 result csvs (d1 to d4).
 ```{r}
-d1 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse_results_Yr1/Phototrapping_data1.csv") %>%
+d1 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/Timelapse_results_Yr1/Phototrapping_data1.csv") %>%
   select(File, RelativePath, DateTime, Sp1, Behaviour, Count1, Sp2, Behaviour2, Count2, Sp3, Count3, Favourite, Obs)
 
-d2 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse_results_Yr1/Phototrapping_data2.csv") %>% # (1) need to change "Pyrus_r6" to "Pyrus"
+d2 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/Timelapse_results_Yr1/Phototrapping_data2.csv") %>% # (1) need to change "Pyrus_r6" to "Pyrus"
   select(File, RelativePath, DateTime, Sp1, Behaviour, Count1, Sp2, Behaviour2, Count2, Sp3, Count3, Favourite, Obs)
 
-d3 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse_results_Yr1/Phototrapping_data3_Pyrus.csv") %>% # (2) need to add Pyrus to the file path
+d3 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/Timelapse_results_Yr1/Phototrapping_data3_Pyrus.csv") %>% # (2) need to add Pyrus to the file path
   select(File, RelativePath, DateTime, Sp1, Behaviour, Count1, Sp2, Behaviour2, Count2, Sp3, Count3, Favourite, Obs)
 
-d4 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse_results_Yr1/Phototrapping_data4_MD_last_run.csv") %>% #Need to revise all the steps, because don´t know the triquiñuels
+d4 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/Timelapse_results_Yr1/Phototrapping_data4_MD_last_run.csv") %>% #Need to revise all the steps, because don´t know the triquiñuels
   select(File, RelativePath, DateTime, Sp1, Behaviour, Count1, Sp2, Behaviour2, Count2, Sp3, Count3, Favourite, Obs)
 
-d5 <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse_results_Yr1/Phototrapping_data5_joxy_yr1_revised_c05.csv") %>%
+d5 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/Timelapse_results_Yr1/Phototrapping_data5_joxy_yr1_revised_c05.csv") %>%
   select(File, RelativePath, DateTime, Sp1, Behaviour, Count1, Sp2, Behaviour2, Count2, Sp3, Count3, Favourite, Obs)
 ```
 
@@ -289,13 +115,13 @@ data_yr1 <- rbind(d1,d2,d3,d4,d5)
 plant <- word(data_yr1$new_path, 1, sep = fixed("\\"))
 
 #Merge them to the dataset
-data_yr1 <- cbind(data_yr1,plant)
+data_yr1 <- cbind(data_yr1,plant)    # 29,123 rows
 
 # NAME CORRECTIONS AND WILD ANIMAL SELECTION #
-#Eliminate car, person, #equus cabalus, equus caballus, bos taurus
+#Eliminate empty videos, car, person, horse and cows   - 11,709 rows
 dat_yr1 <- data_yr1 %>%
-  filter(Sp1 != "") %>%  #Only select videos with animals
-  filter(Sp1 != "car") %>% #Eliminate car, person and empty videos
+  filter(Sp1 != "") %>% 
+  filter(Sp1 != "car") %>% 
   filter(Sp1 != "person") %>%
   filter(Sp1 != "empty")
 
@@ -325,22 +151,23 @@ dat_yr1$Count2 <- ifelse(dat_yr1$Sp2 != "", 1, 0)
 dat_yr1_duration <- read.csv2("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/duration/dat_yr1_duration.csv", sep=",")
 
 #--------------------- SKIP ---------------------------------------- 
-# Get a list of all files in GRAID 
-dir <- list.dirs ("/Volumes/G-RAID/SUMHAL") #Lista de todos los directorios en el Rack
-fil <- list.files(dir, full.names = T) #Lista de archivos con sus directorios
-fil_clean <- fil[!file.info(fil)$isdir] #Lista de videos sin directorios raiz
+# Get a list of ALL files in GRAID 
+dir <- list.dirs ("/Volumes/G-RAID/SUMHAL") #List all directories in the Hard Drive
+fil <- list.files(dir, full.names = T) #List the files
+fil_clean <- fil[!file.info(fil)$isdir] #List of files without empty folders 
   #write.csv(fil_clean, "/Users/PV/video_file_list.csv", sep = ",")
 
 # Get a list of files with eating events (eating videos)  
-files_dat <- str_c(dat_yr1$RelativePath, dat_yr1$File, sep ="/")  #Lista de videos eating
-files_dat_path <- file.path("/Volumes/G-RAID/SUMHAL", files_dat) #Lista de videos eating con su path
+files_dat <- str_c(dat_yr1$RelativePath, dat_yr1$File, sep ="/")  #List of videos with foraging behavior 
+files_dat_path <- file.path("/Volumes/G-RAID/SUMHAL", files_dat) #Add file path
 
 # Correct some path syntax mistakes (detected by setdiff function, see below)   
 fil_eat_clean <- files_dat_path %>%
   str_replace_all("\\\\", "/") %>%
-  str_replace_all("Pyrus_r6", "Pyrus") %>%  #Las 3 filas siguientes son correcciones de paths erroneos
+  str_replace_all("Pyrus_r6", "Pyrus") %>%  # correct errors in 3 paths
   str_replace_all("/Volumes/G-RAID/SUMHAL/Rev", "/Volumes/G-RAID/SUMHAL/Pyrus/Rev") %>%    
   str_replace_all("/Volumes/G-RAID/SUMHAL/Pyrus/Rev_5", "/Volumes/G-RAID/SUMHAL/Pyrus/Rev_5_20211210")   
+
 # Compare eating list to the entire file list (all files in GRAID) to detect missmatches  
 fil_lost <- setdiff(fil_eat_clean, fil_clean) #What is in my_list_2 that is not in my_list_1?
 length(fil_lost)
@@ -353,10 +180,6 @@ duration <- sapply(info, function(x){as.numeric(x[1])}) #Extract only video dura
 
 # Join duration to database  
 dat_yr1_duration <- cbind(dat_yr1, duration)
-
-#Change Count to the number of individuals  
-dat_yr1_duration$Count1 [dat_yr1_duration$Count1 == 0 ] <- 1
-dat_yr1_duration$Count2 <- ifelse(dat_yr1_duration$Sp2 != "", 1, 0)
 
    #write.csv(dat_yr1_duration,"/Users/PV/Desktop/dat_yr1_duration.csv")
 ```
@@ -375,14 +198,14 @@ Plant_ID <- clean %>%
   select (Plant_ID) %>%
   mutate (Plant_ID = str_remove_all (Plant_ID, "_")) %>%
   mutate (Plant_ID = str_sub (Plant_ID, start = 1L, end = 7)) %>%
-  mutate (Plant_ID = str_replace_all(Plant_ID, "a05\\\\100", "a05")) %>%   #Change the name for this corema that was wrong!! note the 4/ not 2
+  mutate (Plant_ID = str_replace_all(Plant_ID, "a05\\\\100", "a05")) %>%   #Change the name for this Corema album that was wrong!! note the \\\\ not \\
   mutate (Plant_ID = str_replace_all(Plant_ID, "pbou121", "pbou012")) 
 
 #Revision_ID
 Rev <- data.frame (str_sub(clean$Rev, start = 1L, end = 5)) %>%
   rename(Rev = str_sub.clean.Rev..start...1L..end...5.) %>%
   mutate(Rev = str_remove_all(Rev, "_")) %>%
-  mutate(Rev = str_replace_all(Rev, "rev", "rev0")) %>%  #Introduce 01, 02, 03 ... for consistencie when joining with sampling effort
+  mutate(Rev = str_replace_all(Rev, "rev", "rev0")) %>%  #Introduce 01, 02, 03 ... for consistency when joining with sampling effort
   mutate(Rev = str_replace_all(Rev, "rev010", "rev10")) %>%
   mutate(Rev = str_replace_all(Rev, "rev011", "rev11")) 
 
@@ -391,12 +214,12 @@ new_dat_yr1 <- dat_yr1_duration %>%
   select(File, RelativePath, new_path, DateTime, Sp1, Behaviour, Count1, Sp2, Behaviour2, Count2, Sp3, plant, duration, Favourite, Obs) %>%
   cbind(Plant_ID, Rev) %>%
   mutate(ID = str_c (Plant_ID, Rev, sep="_")) %>%
-  filter(Behaviour == "eating"|Behaviour == "probably eating"| Behaviour == "searching for food") #Filter only eating (for simplifying later merging with samplig effort and location)
+  filter(Behaviour == "eating"|Behaviour == "probably eating"| Behaviour == "searching for food") #Filter only eating (for simplifying later merging with sampling effort and location)
 
 ```
 
 ### 6. Introduce SAMPLING EFFORT                                - 6,053 rows
-  There is a code to automatize the extraction of video file information regarding to Sampling effort at deployment and upper level. The script is called videofile_batch_data_extraction and creates the video_yr1.csv document where SAMPLING EFFORT for EACH INDIVIDUAL PLANT AND REVISION is obtained for the entire set of videos in Sumhal_Yr1 hard drive.  
+  There is a code to automatize the extraction of video file information regarding to Sampling effort at deployment and upper level. The script is called videofile_batch_data_extraction and creates the video_yr1.csv where SAMPLING EFFORT for EACH INDIVIDUAL PLANT AND REVISION is obtained for the entire set of videos in Sumhal_Yr1 hard drive.  
 ```{r}
 #In case want to skip all this code
 dat_yr1_effort <- read.csv2("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/dat_yr1_effort.csv") #In macbook pro
@@ -549,7 +372,7 @@ df_subset <- subset(sumhal_yr1, DateTime < as.POSIXct("2021-07-15"))  #95 rows
 
 df_subset$ID
 
-#Here the list with TI (before 2020) Note that there could be mor TI with only incorrect time. 
+#Here the list with TI (before 2020) Note that there could be more TI with only incorrect time. 
 list_ID <- df_subset$ID
 
 #Fix dates based in the video ID (generated when collapsing)  - Note that i eliminated Ppin from TI correcting
@@ -702,25 +525,13 @@ new_df_yr1_TI_correct  <- sumhal_yr1 %>%
                Dt_correct = ifelse ( ID == "oeur001_rev04_IMG_0035", "2021-12-23 16:23:00", Dt_correct),
                Dt_correct = ifelse ( ID == "oeur001_rev04_IMG_0042", "2021-12-23 16:45:00", Dt_correct))
 
-#Non corrected TI
-            Dt_correct = ifelse (ID == "rulm016_rev04_IMG_043", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "rulm021_rev03_IMG_091", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "rulm016_rev02_IMG_064", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "rulm016_rev02_IMG_070", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "rulm016_rev02_IMG_087", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "rulm016_rev02_IMG_092", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "pbou002_rev03_0306014", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "pbou002_rev03_0309054", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "pbou002_rev03_0309056", "xxx" , Dt_correct),
-            Dt_correct = ifelse (ID == "pbou004_rev03_0113048", "xxx" , Dt_correct),
-
 write.csv2(new_df_wo_TI, file = "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/sumhal_yr1.csv", sep = ",")
 ```
 
 
 ## 2.2 SUMHAL YR2
 ### 1. Load data                                      - 168,894 rows
-   Load results for all species from visualisation in Timelapse and add a column with the plant species
+   Load results for all species from visualization in Timelapse and add a column with the plant species
 ```{r}
 aune <- read.csv2("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse results Yr2/Arbutus_yr2_revised_c01.csv", sep=",") %>%
   select(File, RelativePath, DateTime, Sp1, Count1, Behaviour, Sex, Sp2, Count2, Behaviour2, Sp3, Juvenile, Favourite, Obs) %>%
@@ -1363,7 +1174,7 @@ collapsed_joxy_yr2 <- joxy_location %>%
 
 ## 2.4 SUMHAL INDETERMINED
 ### 1. Load data 
-indetermined videos reults from TimeLapse (YR1 & YR2)
+Indetermined (determined with external help) videos results from TimeLapse (YR1 & YR2)
 ```{r}
 sumhal_indet <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse results Yr2/indetermined_videos_yr1_yr2.csv", sep = ",")
 
@@ -2222,7 +2033,7 @@ jpho <- read.csv("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Resu
 s_yr1 <- sumhal_yr1 %>%
   mutate(Behaviour = first(Behaviour)) %>%
   filter(Plant != "pinus" ) %>%   #Eliminate Pinus from the db as it is not fleshy fruit
-  select(Sp1, Plant, Plant_ID, DateTime, Behaviour, Coexistence, n_cam, Days, Days.in.field, duration, ID, long, lat) %>%
+  select(Sp1, Plant, Plant_ID, Revision_ID, DateTime, Behaviour, Coexistence, n_cam, Days, Days.in.field, duration, ID, long, lat) %>%
   mutate(Plant = if_else ( Plant == "pyrus"      , "pbou" , Plant), #Change plant names for consistency
         Plant = if_else ( Plant == "corema_2"   , "calb" , Plant),
         Plant = if_else ( Plant == "asparagus"  , "aspa" , Plant),
@@ -2246,13 +2057,11 @@ s_yr2 <- sumhal_yr2 %>%
 
 j_yr2 <- joxy_yr2 %>%
   mutate(ID = str_c(Plant_ID, Revision_ID, File, sep = "_")) %>%
-  select(Sp1, Plant, Plant_ID, DateTime, Behaviour, Coexistence, n_cam, Days, Days.in.field, duration, ID, long, lat) %>%
+  select(Sp1, Plant, Plant_ID, Revision_ID, DateTime, Behaviour, Coexistence, n_cam, Days, Days.in.field, duration, ID, long, lat) %>%
   mutate(Plant_ID = str_to_lower(Plant_ID),
          DateTime = as.POSIXct(DateTime))
 
 sumhal <- rbind(s_yr1, s_yr2, j_yr2)   #Here Sumhal data are consistent and joinned in one df 
-
-sort(unique(sumhal$Plant))
 ```
 
 ## 3.3 Integrate COREMA_1                                   - 721 rows
@@ -2262,7 +2071,7 @@ cor_1 <- corema_1 %>%
         Coexistence = FALSE,
         ID = str_sub(ID, start = 1L, end = 12),
         DateTime = as.POSIXct(DateTime)) %>%
-  select(Sp1, Plant, Plant_ID, DateTime, Behaviour, Coexistence, n_cam, Days, Days.in.field, duration, ID, lat, long)
+  select(Sp1, Plant, Plant_ID, Revision_ID, DateTime, Behaviour, Coexistence, n_cam, Days, Days.in.field, duration, ID, lat, long)
 
   
 #Join SUMHAL (8,326 row) df to COREMA_1 (721 rows) DF == 9,047 rows 
