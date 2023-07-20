@@ -1,0 +1,258 @@
+---
+title: "Doñana_frugyvory_camptrap"
+author: "PVA"
+date: "6/7/2023"
+output: html_document
+---
+The following script compiles some basic descriptors and graphics for the Doñana_frugivory camptrap datapaper. We present data summaries from phyto and zoocentric perspectives, basic trophic webs to show possible uses of the dataset.    
+
+Libraries
+```{r}
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(bipartite)
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+library(av)
+library(viridis)
+
+#For activity
+library(activity)
+library(camtrapR)
+library(overlap)
+library(astroFns)
+```
+          
+
+# PRELIMINARY ANALYSIS AND FIGURES
+## 1. Load data
+```{r }
+sumhal_data <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Dataset_2023_07_19/DataS1.csv")
+```
+
+## 2. NETWORKS
+```{r }
+#------------------------------------------------------------------------------------------------
+#Compare matrix for mammals vs birds
+mammal <- sumhal_data %>%
+     filter(SpeciesType == "Mammal")
+
+bird <- sumhal_data %>%
+     filter(SpeciesType == "Bird") 
+    
+mammal_mat <-  xtabs(~PlantSpecies + AnimalSpecies, mammal)
+bird_mat <- xtabs(~PlantSpecies + AnimalSpecies, bird)
+
+#BIRD WEB
+# Define the species and color palette
+species <- unique(bird$AnimalSpecies)
+color_palette <- viridis(length(species))  # Adjust the colors as needed
+
+# Create a named vector to map species to colors
+species_color_mapping <- setNames(color_palette, species)
+
+# Sort species names alphabetically
+sorted_species <- sort(colnames(bird_mat))
+
+# Rearrange the rows and columns of the bipartite matrix
+sorted_bird_mat <- bird_mat[, sorted_species]
+ 
+# Create the plot using Plotweb or your chosen bipartite network visualization tool
+plotweb(sorted_bird_mat,
+        method = "normal", 
+  col.high = color_palette,
+  col.interaction = color_palette,
+  text.rot = 90,
+  col.low = "grey90",
+  bor.col.interaction = color_palette)
+
+#MAMMAL WEB 
+# Define the species and color palette
+species <- unique(mammal$Sp1)
+color_palette <- viridis(length(species))  # Adjust the colors as needed
+
+# Create a named vector to map species to colors
+species_color_mapping <- setNames(color_palette, species)
+
+# Sort species names alphabetically
+sorted_species <- sort(colnames(mammal_mat))
+
+# Rearrange the rows and columns of the bipartite matrix
+sorted_mammal_mat <- mammal_mat[, sorted_species]
+ 
+# Create the plot using Plotweb or your chosen bipartite network visualization tool
+plotweb(sorted_mammal_mat,
+        method = "normal", 
+  col.high = color_palette,
+  col.interaction = color_palette,
+  text.rot = 90,
+  col.low = "grey90",
+  bor.col.interaction = color_palette)
+
+# ---------------------------- INDIVIDUAL WEBS ---------------------
+#We use Rubus ulmifolius for the example change PlantSpecies for plotting other species   
+
+#Individual level webs
+rubus <- sumhal_data %>%
+  filter(PlantSpecies == "Rubus ulmifolius") 
+
+rubus_mat <- xtabs(~PlantID + AnimalSpecies, rubus)
+
+# Sort species names alphabetically
+sorted_df <- rubus[order(rubus$SpeciesType, rubus$AnimalSpecies), ]
+sorted_species <- unique(sorted_df$AnimalSpecies)
+
+color_palette <- viridis(length(sorted_species))  # Adjust the colors as needed
+
+# Create a named vector to map species to colors
+species_color_mapping <- setNames(color_palette, sorted_species)
+
+# Rearrange the rows and columns of the bipartite matrix
+sorted_rubus_mat <- rubus_mat[, sorted_species]
+ 
+# Create the plot using Plotweb or your chosen bipartite network visualization tool
+plotweb(sorted_rubus_mat,
+  method = "normal",
+  col.high = color_palette,
+  col.interaction = color_palette,
+  text.rot = 90,
+  col.low = "grey90",
+  bor.col.interaction = color_palette)
+```
+
+## 3. DOUBLE AXIS chart
+   Sampling effort vs number of interactions charts
+   Here we create a sampling effort bar chart for SPECIES and for individual plants
+```{r }
+#df with sampling effort by plant and number of interactions
+df <- sumhal_data %>%
+  select(PlantSpecies, EffortSpecies) %>%
+  group_by(PlantSpecies)%>%
+  summarise(eff = first(EffortSpecies),
+            n= n())
+
+#Plot sampling effort and number of interactions together
+#Scale factor
+scaleFactor <- max(df$eff) / max(df$n)
+
+#Plot
+ggplot(df, aes(x = fct_reorder(PlantSpecies, desc(n)),  width=.4)) +
+  geom_col(aes(y=eff), fill="powderblue", position = position_nudge(x = -.4)) +
+  geom_col(aes(y=n * scaleFactor), fill="indianred2") +
+  scale_y_continuous(name="Sampling effort", sec.axis=sec_axis(~./scaleFactor, name="Number of interactions")) +
+  xlab("Plant species") + 
+  theme(
+    axis.title.y.left=element_text(color="deepskyblue4"),
+    axis.text.y.left=element_text(color="deepskyblue4"),
+    axis.title.y.right=element_text(color="firebrick3"),
+    axis.text.y.right=element_text(color="firebrick3"),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.text.x = element_text(angle = 60, hjust = 1)) 
+
+```
+
+## 4. RECORDINGS by species 
+Figure Animal Species recorded  x = number of records per species y = species names
+```{r }
+mammal <- sumhal_data %>%
+     filter(SpeciesType == "Mammal") %>%
+  group_by(AnimalSpecies) %>%
+  summarise(n(),
+            SpeciesType = first(SpeciesType)) %>%
+  data.frame()%>%
+  mutate(Sp1 = str_to_sentence(AnimalSpecies))%>%
+  arrange(desc(n..)) 
+
+bird <- sumhal_data %>%
+     filter(SpeciesType == "Bird") %>%
+  group_by(AnimalSpecies)%>%
+  summarise(n(),
+            SpeciesType = first(SpeciesType)) %>%
+  data.frame()%>%
+  mutate(Sp1 = str_to_sentence(AnimalSpecies))%>%
+  #filter(n.. > 10)%>%
+  arrange(desc(n..))
+
+#bind mammals and birds and order each group by species Type 
+df <- rbind (mammal, bird)
+df$AnimalSpecies <- factor(df$AnimalSpecies, levels = df$AnimalSpecies[order(df$n..)])
+
+ggplot(df, aes(x = n.., y = fct_reorder(AnimalSpecies, SpeciesType), fill = SpeciesType)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Number of Events", y = "Species", fill = "Type") +
+  theme(axis.text.y = element_text(size = 5),
+        panel.background = element_blank(),
+        axis.line = element_line(colour = "black"))
+  
+```
+
+## 5. ACTIVITY patterns
+      Preliminary script and Denisty plots for activity patterns in Doñana frugivores. 
+```{r }
+# ----------------  1.Convert the data for later analysis 
+  # Convert time into radians (Check dates for timestamp issues). 
+radians <- gettime(sumhal_data$DateTime, format= "%Y-%m-%d %H:%M:%S", scale = "radian" )
+date <- as.POSIXct(sumhal_data$DateTime, format = "%Y-%m-%d %H:%M:%S") #Date as.POSIXct
+time <- date %>%
+  str_sub (start =12L, end = 20)
+
+  #solartime() transforms clock time to solar time anchored to sun rise and sunset times for a given location.
+solartime <- solartime(date, lat= 37.0000000 , long= -6.3333300,tz= 2  ,"%y-%m-%d %H:%M:%S")
+solar <- solartime$solar #Create new column with solar time
+solar_input <- solartime$input
+
+  #Dataset for analizing activity patterns 
+act_data <- sumhal_data %>%
+  cbind(radians, date, solar, solar_input, time) %>%
+  select(AnimalSpecies, PlantSpecies, DateTime, date, Behaviour, solar, time) %>%
+  filter(PlantSpecies != "Pistacia lentiscus" )
+
+    #Construct df for two plant species
+aspa <- act_data %>%subset(PlantSpecies == "Asparagus aphyllus")
+rulm <- act_data %>%subset(PlantSpecies == "Rubus ulmifolius")
+
+#-----------------   2. Analysis
+# 2.1 Plot activity for one species (example)
+activityDensity(recordTable = aspa, species = "Sylvia melanocephala", speciesCol = "AnimalSpecies", recordDateTimeCol = "date", recordDateTimeFormat = "%Y-%m-%d %H:%M:%S", plotR = TRUE)
+
+# 2.2 Compare activity of two species (example)
+activityOverlap (recordTable = rulm, speciesA    = "Sylvia melanocephala" , speciesB = "Sylvia communis", plotR = TRUE, linewidth = c(2.5, 2.5), 
+                 linetype = c(1,1), linecol = c("#4682B4", "#D7C26F"), olapcol = "#FFFFE0",
+                 add.rug     = TRUE, speciesCol = "AnimalSpecies", recordDateTimeCol = "date",  recordDateTimeFormat = "%Y-%m-%d %H:%M:%S", addLegend = FALSE)
+```
+
+## 6. RAREFACTION curves
+```{r }
+ # Here we plot the species accumulation curve using PAIRWISE INTERCTIONS instead of species and individual plants as sites. Therefore we we plot the Interaction accumulation curve (IAC) performed similarly as species diversity accumulation curve analysis considering each pairwise-interaction as a “species” and the different Plant individuals as sampling units (Jordano 2016). 
+
+#Summarise number of foraging species in individual plants
+df <- sumhal_data %>%
+   mutate(pl = str_sub(PlantID, start = 1L, end = 4),
+         pairwise_int = str_c(pl, AnimalSpecies, sep = "_"))%>%
+  group_by(PlantID, pairwise_int) %>%
+  summarise(n_interactions = n())
+  
+#Transpose the dataframe into an observation matrix where each row is the data collection in each of the plant individuals. Columns are frugivore species
+obs <- df %>%
+  pivot_wider(names_from= pairwise_int, values_from= n_interactions, 
+                     values_fill= list(count= 0)) %>%
+  replace(is.na(.), 0) 
+
+sp2<-specaccum(obs[,-c(1:3)])
+
+plot(sp2, ci.type="poly", col="blue", lwd=2, ci.lty=0, ci.col="lightblue",
+      xlab = "Number of plant individuals", ylab = "Interaction richness")
+
+
+#Obtain Species Richness estimators (Species richness/PlantID):
+specpool(obs[,-c(1:3)],obs$PlantID)
+ 
+```
+
+
+
+
+
