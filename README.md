@@ -5,11 +5,11 @@ This is a public repository for the data and code included in our data paper:
 
 Title: doñana frugivory camtra
 
-Authors: Pablo Villalva1, Gemma Calvo1, Pablo Homet1, Jorge Isla1, Eva Moracho1, Elena Quintero1 and Pedro Jordano1,2
-
-1. Estación Biológica de Doñana, CSIC, Av. Americo Vespucio 24, E-41092 Sevilla, Spain
-
-2. Dept. Biología Vegetal y Ecología, Universidad de Sevilla, Sevilla, Spain
+Authors:
+Pablo Villalva1, Gemma Calvo1, Pablo Homet1, Jorge Isla1, Eva Moracho1, Elena Quintero1, Blanca Arroyo-Correa1, Francisco Rodríguez-Sánchez2, Irene Mendoza1, Pedro Jordano1,2 
+Author Affiliations:
+1, Integrative Ecology Group. Estación Biológica de Doñana, CSIC. Sevilla, Spain.
+2, Dept. Biología Vegetal y Ecología, Universidad de Sevilla, Sevilla, Spain.
 
 Abstract:
 Ecological interactions are a key component of biodiversity and essential for understanding ecosystem services and functioning. However, consideration of ecological interactions as a component of biodiversity has received limited attention. There is an urgent need to record, quantify and assess ecological interactions to better understand the contribution of biodiversity to ecosystem functioning.
