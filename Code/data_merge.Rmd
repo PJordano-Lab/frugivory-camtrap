@@ -16,8 +16,190 @@ library(dplyr)
 library(stringr)
 library(lubridate)
 ```
-#CALCULATE SAMPLING EFFORT
+# 1. CALCULATE SAMPLING EFFORT 
+(The code for calculatins samplig effort that follows is paste here as requested by J.I. and wont be in this repository for publication - however it would be kept in the sister repository)
 
+Here I will create the sampling effort for each Plant individual and plant Species  
+
+## 1. Read the data with sampling efforts (in Sumhal databases effort is extracted automatically from first and las files/camara/revision in HD devices; in Jpho and Plen effort was facilitated by J.I and E.Q. P.len need som extra 
+```{r }
+effort_yr1 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/Video_yr1.csv")
+effort_yr2 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/video_yr2.csv", sep=";")
+effort_cor_1 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/Corema_1_dates.csv", sep=",")  
+
+effort_jpho <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/sampling_effort_CT_JP.csv", sep= ",")
+  
+#Note that plen was recorded with go-pro and not camtraps. Though sampling effort for each individual is referred to the entire day rather ~2 hours. Still the ratio interactiosn/day is much higher with gopro due to the much wider video frame and image quality, that notably enhances detectability. ==> dont miss a thing in the entire (half) plant!    
+effort_plen <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/sampling_effort_plen.csv")
+
+```
+### 1.1 PISTACIA LENTISCUS -  Pistacia lentiscus was recodrded with Go Pro cameras rather camera traps. In most cases it was set in the morning and recorded continously for aprox. 2 hours. Sampling effort is calculated differently and is not directly comparable with camera traps sampling efforts. 
+```{r }
+# Code to create Pistacia lentiscus sampling effort table (at individual level)
+
+  ## 1. Load data & bind different years                             - 4,563 rows
+len_1 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/visits_cam_2018-19_sumhal.csv", sep = ";")
+len_2 <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/visits_cam_2019-20_sumhal.csv", sep = ";")
+
+   ###1.2 Bind 2018-19 and 2019-20 field data in a unique dataset (n = 4563 obs).
+len_1 <- len_1[1:14]
+len_2 <- len_2[1:14]
+len_2$duration <- str_sub(len_2$duration, start = 4, end =7) #need to eliminate %H from %H:%M:%OS for consistency with len_1
+
+  len <- rbind(len_1, len_2)
+
+  ## 2. Fix SAMPLING EFFORT for consistency with Sumhal: Transform from %H:%M:%S to decimal hours for consistency
+hora_decimal <- sapply(strsplit(len$recording_time, ":"),
+                       function(x) {
+                         x <- as.numeric(x)
+                         x[1]+(x[2]/60)+(x[3]/3600) }) #This calculates the decimal representation of time by adding the hours (x[1]), minutes (x[2] divided by 60 to convert them to hours), and seconds (x[3] divided by 3600 to convert them to hours).
+
+  len <- cbind(len, hora_decimal)
+  
+#--------------------------------- APPROACH 1 -------------------------------------
+  ## 3. Calculate Sampling effort by plant id and revision
+eff_len <- len %>%
+  group_by(plant_id, date) %>%
+  summarise(EffortRev.hours = mean(hora_decimal))
+
+ ## 4. Sampling effort at Species level = 852.5107
+sum(eff_len$EffortRev.hours)
+
+ ## 5.  Sampling effort at Individual level (aprox 20 h per plant but individuals 333 and 328 only 2h)
+effort_len_ind_hour <- eff_len %>%
+  group_by (plant_id) %>%
+  summarise(hour_effort = sum(EffortRev.hours))%>%
+  data.frame()
+
+#-----------------------------------   APPROACH 2 --------------------------------
+#Here we will suppose that in each revision, each go-pro recorded the entire day and not only 2 h. This would be more realistic for comparing sampling efforts with camera traps.
+#remember that with go-pro cameras the video frame is much wider than with cameratraps and high image quality enhances detectability a lot making the interactions/day higher than the rest of species ==> you dont miss a thing!  
+
+  ## Every individual and day represents an entire day (not in hours as in approach 1)
+eff_len_days <- len %>%
+  mutate(day = 1) %>%
+  group_by(plant_id, date) %>%
+  summarise(EffortRev.day = mean(day))
+
+  # number of sampled days at each individual plant
+effort_len_ind_day <- eff_len_days %>%
+  group_by (plant_id) %>%
+  summarise(days = sum(EffortRev.day))%>%
+  data.frame()
+
+#------------------------------- Merge data from approach 1 & 2 -------------------
+
+plen_effort <- left_join(effort_len_ind, effort_len_ind_day, by = "plant_id")
+
+#write.csv(plen_effort, "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/sampling_effort_plen2.csv")
+```
+
+## 2. GROUP effort by PLANT species
+```{r }
+#SUMHAL YR1
+eff_sp_yr1 <- effort_yr1 %>%
+  mutate(Plant = str_replace_all(Deployment_ID, "A0","Calb0"), #Change individual Corema names
+         Plant = str_replace_all(Plant, "A1","Calb1"),
+         Plant = str_replace_all(Plant, "A2","Calb2"),
+         Plant = str_sub(Plant, start = 1L, end = 4)) %>%  #Substract Plant species name
+  group_by(Plant) %>%
+  summarise(effort_pl_sp = sum(Days))
+
+#SUMHAL YR2
+eff_sp_yr2 <- effort_yr2 %>%
+  mutate(Plant = str_sub(deployment, start = 1L, end = 4),
+         Plant = str_to_title(Plant)) %>%
+  group_by(Plant) %>%
+  summarise(effort_pl_sp = sum(num_days))
+  
+#COREMA_1
+eff_sp_cor_1 <- effort_cor_1 %>%
+   mutate(Plant = str_replace_all(Plant_ID, "A0","Calb0"), #Change individual Corema names
+          Plant = str_replace_all(Plant, "A1","Calb1"),
+          Plant = str_replace_all(Plant, "A2","Calb2"),
+          Plant = str_sub(Plant, start = 1L, end = 4)) %>%
+  group_by (Plant) %>%
+    summarise (effort_pl_sp = sum(num_days))
+
+#Juniperus Phoenicea
+eff_sp_jpho <- effort_jpho %>%
+  mutate(Plant = "Jpho") %>%
+  group_by(Plant) %>%
+  summarise(effort_pl_sp = sum(totaldays))
+  
+  
+#Pistacia lentiscus (sompling effort in Plen can be refered to the ~ 2 hours/day but we will use the proxy of the entire day 
+eff_sp_plen <- effort_plen %>%
+  mutate(Plant = "Plen")%>%
+  group_by (Plant) %>%
+  summarise(effort_pl_sp = sum(days))
+
+
+#Bind each dataframe and group those Species that were sampled different years
+effort_species <- rbind(eff_sp_yr1, eff_sp_yr2, eff_sp_cor_1, eff_sp_jpho, eff_sp_plen) %>%
+  group_by(Plant) %>%
+  summarise(effort_pl_sp = sum(effort_pl_sp))   
+
+write.csv(effort_species, "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/effort_species.csv")
+```
+
+## 3. Group effort by PLANT_ID
+
+```{r }
+#SUMHAL YR1
+eff_ind_yr1 <- effort_yr1 %>%
+  mutate(Plant_ID = str_replace_all(Deployment_ID, "A0","Calb0"), #Change individual Corema names
+         Plant_ID = str_replace_all(Plant_ID, "A1","Calb1"),
+         Plant_ID = str_replace_all(Plant_ID, "A2","Calb2"),
+         Plant_ID = str_remove_all(Plant_ID, "_"),
+         Plant_ID = str_sub(Plant_ID, start = 1L, end = 7)) %>%  #Substract Plant species name
+  group_by(Plant_ID) %>%
+  summarise(effort_ind = sum(Days))
+
+
+#SUMHAL YR2
+eff_ind_yr2 <- effort_yr2 %>%
+  mutate(Plant_ID = str_replace_all(deployment, "Oeur20","Oeur020"),
+         Plant_ID = str_replace_all(Plant_ID, "Oeur21","Oeur021"),
+         Plant_ID = str_replace_all(Plant_ID, "Olan_01","Olan001"),
+         Plant_ID = str_sub(Plant_ID, start = 1L, end = 7),
+         Plant_ID = str_to_title(Plant_ID)) %>%
+  group_by(Plant_ID) %>%
+  summarise(effort_ind = sum(num_days))
+
+#COREMA_1
+eff_ind_cor_1 <- effort_cor_1 %>%
+   mutate(Plant_ID = str_replace_all(Plant_ID, "A0","Calb0"), #Change individual Corema names
+          Plant_ID = str_replace_all(Plant_ID, "A1","Calb1"),
+          Plant_ID = str_replace_all(Plant_ID, "A2","Calb2"),
+          Plant_ID = str_sub (Plant_ID, start = 1L, end = 7)) %>%
+  group_by (Plant_ID) %>%
+    summarise (effort_ind = sum(num_days))
+
+#Juniperus Phoenicea
+eff_ind_jpho <- effort_jpho %>%
+  mutate(Plant_ID = str_replace_all(ind, "C", "Jpho"),
+         Plant_ID = str_replace_all(Plant_ID, "O", "Jpho"),
+         Plant_ID = str_replace_all(Plant_ID, "M", "Jpho")) %>%
+  group_by(Plant_ID)%>%
+  summarise(effort_ind = sum(totaldays))
+
+
+#Pistacia lentiscus (sompling effort in Plen is refered to the ~ 2 hours that the GoPro are set divided by day, but only 12 hours)
+eff_ind_plen <- effort_plen %>%
+  mutate(Plant_ID = str_c("Plen", plant_id, sep=""))%>%
+  select(Plant_ID, days) %>%
+  rename(effort_ind = days)
+  
+
+#Bind each dataframe and group those Species that were sampled different years
+effort_ind <- rbind(eff_ind_yr1, eff_ind_yr2, eff_ind_cor_1, eff_ind_jpho, eff_ind_plen) %>%
+  group_by(Plant_ID) %>%
+  summarise(effort_ind = sum(effort_ind)) 
+
+#write.csv(effort_ind, "/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/temp_results/sampling_effort/effort_individual_level.csv")
+
+```
 
 # DATA MERGING
 ## 1 Load data 
