@@ -6,7 +6,7 @@ output: html_document
 ---
 The following scripts compile several datasets for Doñana-camtrap-frugivory data paper.
 
-We merge and standardise data from different surveys of Ecological Interactions in Doñana. Those are  Sumhal yr1/yr2 & Corema_1 & Juniperus phoenicea (Islas phD thesis) & Pistacia lentiscus (Quinteros phD thesis).
+We merge and standardise data from different surveys of Ecological Interactions in Doñana. Those areSumhal yr1/yr2 & Corema_1 & Juniperus phoenicea (Islas phD thesis) & Pistacia lentiscus (Quinteros phD thesis).
 
 Here we integrate (merge) all the datasets into one final df while we correct some inconsistencies and introduce coordinates & sampling effort at species and individual level.
 
@@ -16,6 +16,8 @@ library(dplyr)
 library(stringr)
 library(lubridate)
 ```
+#CALCULATE SAMPLING EFFORT
+
 
 # DATA MERGING
 ## 1 Load data 
@@ -334,10 +336,16 @@ data13 <- data12 %>%
 data14 <- data13 %>%
   mutate(RevisionID = case_when(
     grepl("^Rev\\d$", RevisionID) ~ paste0("Rev0", substr(RevisionID, start = 4, stop = nchar(RevisionID))),
-    TRUE ~ RevisionID
-  )) 
+    TRUE ~ RevisionID)) 
 
-#write.csv(data14, "/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Dataset_2023_07_19/DataS1.csv")
+# -------- Change names from Gr. Sylvia maintaining S.atricapilla and S.borin
+data15 <- data14 %>%
+  mutate(AnimalSpecies = str_replace_all(AnimalSpecies, "Sylvia", "Curruca"),
+         AnimalSpecies = str_replace_all(AnimalSpecies, "Curruca atricapilla", "Sylvia atricapilla"),
+         AnimalSpecies = str_replace_all(AnimalSpecies, "Curruca borin", "Sylvia borin"))
+
+#write.csv(data15, "/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Dataset_2023_07_19/DataS1_corrected_sylvia.csv")
+
 ```
 
 
