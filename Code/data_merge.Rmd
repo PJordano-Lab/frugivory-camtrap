@@ -528,6 +528,20 @@ data15 <- data14 %>%
 
 #write.csv(data15, "/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Dataset_2023_07_19/DataS1_corrected_sylvia.csv")
 
+kk <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Dataset_2023_07_19/DataS1.csv")
+
+tt <- kk %>%
+  filter(is.na(EffortInd))
+
+kk %>%
+  filter(AnimalSpecies == "Sylvia borin")
+
+Jpho2 <- kk %>%
+  filter (PlantSpecies == "Juniperus phoenicea")
+
+unique(Jpho2$PlantID)
+  
+
 ```
 
 

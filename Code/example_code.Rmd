@@ -1,10 +1,10 @@
 ---
-title: "Doñana_frugyvory_camptrap"
+title: "Frugyvory_camptrap"
 author: "PVA"
-date: "6/7/2023"
+date: "14/8/2023"
 output: html_document
 ---
-The following script is an example of the workflow needed to compile the information from camera traps for ecological interactions in the data-paper Frugivory-camtrap. Note that this example only uses data from the species Arbutus unedo during the second fruiting season monitored (2022-2023). The input file is a .csv that have been visualized and tagged in the TimeLapse visualization program (Greenberg ####) after a Megadetector (AI) run to remove blank videos.   
+The provided script illustrates the workflow employed to compile the data produced by camera traps for ecological interactions in the data paper "Frugivory-camtrap". Note that this example uses data from the plant species "Arbutus unedo" during the monitoring of the second fruiting season (2022-2023). The input file is a plain text (csv) generated after visualizing and tagging in TimeLapse visualization program (Greenberg, 2020) and after a Megadetector (Beery et al. 2019) run to remove blank videos.   
 
 Libraries
 ```{r}
@@ -13,14 +13,13 @@ library(stringr)
 library(lubridate)
 ```
 # 1. SAMPLING EFFORT 
-## 1. Read the data with sampling efforts from camera trap survey
+## 1.1. Read the data with sampling efforts from camera trap survey
 ```{r }
-sampling_effort <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Sampling_effort/raw_effort/video_yr2.csv", sep=";") %>%
-  filter(grepl("Aune", deployment)) %>%
-  mutate(Plant_ID = str_sub(deployment, start = 1L, end = 7)) #Maybe introduce this column in the sampling effort.csv before reading.
+#Sampling effort data for Arbutus unedo (second fruiting season)
+sampling_effort <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/sampling_effort.csv")
 ```
 
-## 2. GROUP effort for plant species level and for individual plant level 
+## 1.2. GROUP effort for plant species level and for individual plant level 
 ```{r }
 #Species level
 eff_sp_level <- sum(sampling_effort$num_days)
@@ -30,87 +29,34 @@ eff_ind_level <- sampling_effort %>%
    group_by(Plant_ID) %>%
    summarise(effort_ind = sum(num_days))
 
-#Revision level
+#Revision level (and TimestampIssues)
 eff_rev <- data.frame(sampling_effort %>%
   group_by (Plant_ID, rev) %>%
   summarise(effort_rev = sum(num_days),
             n_cam = n(), 
-            ID = str_c(Plant_ID, rev, sep="_" ))) %>%
+            ID = str_c(Plant_ID, rev, sep="_" ))) %>% 
   select(ID, n_cam, effort_rev)
-
 ```
 
-
-# DATA MERGING
-## 0. Prepare toy dataset
+# DATA MANAGENEMT
+## 1. Load video level data                             - 10,827 rows 
+The data is the output after the visualization with TimeLapse.
 ```{r }
-#Prepare Aune data
-Aune_data <-  read.csv2 ("/Users/Pablo/Documents/GitHub/Animal-detection-cameratrap/Results/Timelapse results Yr2/Arbutus_yr2_revised_c01.csv", sep = ",") 
-  
-splited_path <- data.frame(str_split_fixed(Aune_data$RelativePath, "\\\\", 4))%>%
-  rename(Folder = X1, Plant = X2, Revision = X3, Deployment = X4) %>%
-  mutate(Revision = str_remove_all(Revision, "Aune_"),
-         Revision = str_sub(Revision, start = 1, end = 5))
-
-Revision <- data.frame(splited_path$Revision) %>%
-  rename(Revision = splited_path.Revision)
-
-Deployment_ID <- data.frame(splited_path$Deployment)%>%
-  rename(Deployment_ID = splited_path.Deployment)
-
-Plant_ID <- data.frame(str_sub(splited_path$Deployment, start=1, end = 7)) %>%
-  rename(Plant_ID = str_sub.splited_path.Deployment..start...1..end...7.)
-
-Aune_data2 <- Aune_data %>%
-  mutate(Path = str_c(RelativePath, File, sep = "/"),
-         Path = str_replace_all(Path, "\\\\", "/"),
-         Path = str_remove_all(Path, "SUMHAL_YR2/Arbutus/Aune_"))%>%
-  cbind(Revision, Deployment_ID, Plant_ID)
-
-#change counts
-Aune_data2$Count1 <- ifelse(Aune_data2$Sp1 != "", 1, Aune_data2$Count1)
-Aune_data2$Count2 <- ifelse(Aune_data2$Sp2 != "", 1, Aune_data2$Count2)
-
-#Select columns
-Aune_data3 <- Aune_data2 %>%
-  select(File, Path, Plant_ID, Revision, DateTime, Behaviour, Sp1, Count1, Sp2, Count2, Behaviour2, Deployment_ID)
-
-write.csv(Aune_data3, "/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/toy_dataset.csv")
-
-#Thing to do before reading:
-  #Change counts from raw data count == 0 should be 1. 
-  #Include revision Revision = str_sub(Path, start = 1, end = 5)
-
-#----------------------------------------------------------
-
-#Prepare file info 
-file_info <- read.csv2 ("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/File_info_HD/file_info.csv", sep=",") %>%
-  filter(grepl("Aune", Path)) %>%
-  select(Path, duration) %>%
-  mutate(Path = str_remove_all(Path, "/Volumes/G-RAID/SUMHAL/Arbutus/"),
-         Path = str_remove_all(Path, "/Volumes/G-RAID-3/SUMHAL_YR2/Arbutus/Aune_"))
-
-write.csv(file_info, "/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/File_info_HD/toy_file_info.csv")
-
-colnames(Aune_data2)
+Aune_data <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/example_dataset.csv")
 ```
 
-## 1. Load video level data - The data is the output after the visualization with TimeLapse.
-```{r }
-Aune_data <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/raw_data/toy_dataset.csv")
-```
-
-## 2. Include video duration 
+## 2. Include video duration                            - 10,827 rows
 ```{r }
 #Summary list of file metadata extracted from Hard drive files
-file_info <- read.csv2 ("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/File_info_HD/toy_file_info.csv", sep=",")
+file_info <- read.csv ("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/file_info.csv") %>%
+  select(Path, duration)
 
 #join data and file list
 Aune_dat <- Aune_data %>%
   left_join(file_info, by = "Path")
 ```
 
-## 3. Include sampling effort 
+## 3. Include sampling effort                           - 10,827 rows 
 ```{r }
 Aune_dat_effort <- Aune_dat %>%
   mutate(ID = str_c(Plant_ID, Revision, sep = "_"),
@@ -120,23 +66,21 @@ Aune_dat_effort <- Aune_dat %>%
   distinct()
 ```
 
-## 4. Include coordinates 
+## 4. Include coordinates                               - 10,827 rows
 ```{r }
-coord <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Metadata/Coordinates/coordinates_13_spp.csv") %>%
-  filter(grepl("aune", Plant_ID)) %>%
-  mutate(Plant_ID = str_to_sentence(Plant_ID))
-  
+coord <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/coordinates.csv") 
+
 Aune_dat_coord <- Aune_dat_effort %>%
   left_join(coord, by = "Plant_ID")
 ```
 
-## 5. Filter eating behaviours - 2,662 rows 
+## 5. Filter eating behaviours                          - 2,662 rows 
 ```{r }
 Aune_eating <- Aune_dat_coord %>%
   filter(Behaviour == "eating"| Behaviour == "probably eating" | Behaviour == "searching for food")
 ```
 
-## 6. Split entries with two species.
+## 6. Split entries with two species                    - 2,638 rows
 We will duplicate the entries where there are two species (SP2 = "non empty") and rename Sp1 with Sp2 name. The rest of the columns will maintain invariable (traceable through Plant_ID/Rev/File). A new column "Coexistence" will be created for searching events with more than one species.
 ```{r }
 # Rows with only one species  - 2,576 row
@@ -157,104 +101,57 @@ Aune_split <- bind_rows(rows_wo_sp2 , new_rows_for_sp2) %>%
   select(!c (Sp2, Count2, Behaviour2)) 
 ```
 
-## 7. Collapse videos into 5 min events
-
+## 7. Remove unknown species and correct inconsitencies - 2,628 rows
 ```{r}
-#check
-Aune_collapsed <- Aune_split %>%
-  group_by (Plant_ID, Revision) %>%
+#Remove unknown species and correct some inconsistent names for Sp1
+df1 <- Aune_split %>%
+  filter( Sp1 != "?", 
+          Sp1 != "") %>%
+  mutate( Sp1 = str_to_sentence(Sp1))
+
+#Rectify inconsistent names resulting from manual typing during the visualization process.  
+df1$Sp1 [df1$Sp1 == "Fr" ] <- "Fringilla coelebs"
+df1$Sp1 [df1$Sp1 == "Turdus me" ] <- "Turdus merula"
+df1$Sp1 [df1$Sp1 == "Sylvia melanocephala" ] <- "Curruca melanocephala"
+```
+
+## 8. Collapse videos into 5 min events                 - 1,704 rows
+```{r}
+Aune_collapsed <- df1 %>%
+  group_by(Plant_ID, Revision) %>%
   mutate(interval = as.POSIXct(round(as.numeric(as.POSIXct(DateTime)) / (60*5)) * (60*5), origin="1970-01-01")) %>%
   group_by(interval, Sp1) %>%
-  summarize(File = paste(File, collapse=', '),
-            Plant_ID = first(Plant_ID),
-            Revision = first(Revision),
-            DateTime = first(DateTime),
-            AnimalSpecies = paste(Sp1, collapse=', '),
-            Behaviour = paste(Behaviour, collapse=', '),
-            Count = max(Count1),
-            Coexistence = first(Coexistence),
-            n_cam = first(n_cam),
-            EffortRev = first(effort_rev),
-            EffortSpLevel = first(effort_sp_level),
-            EffortInd = first(effort_ind),
-            n = n(),
-            Duration = sum(duration),
-            Long = first(Long),
-            Lat = first(Lat)) %>%
-  mutate(videos_events = sqrt(n*12),  # 5 minute interval, so 12 intervals per hour
-         ID = first(ID)) #To select later on Timestamp Issue fixing
-
-
-str(Aune_collapsed)
-names(Aune_split)
-names(sumhal_data)
-
+  summarize( 
+    n = n(),
+    PlantSp = "Arbutus unedo",
+    Plant_ID = first(Plant_ID),
+    File = paste(File, collapse=', '),
+    Count = max(Count1),
+    DateTime = first(as.POSIXct(DateTime)),
+    Behaviour = paste(Behaviour, collapse=', '),
+    Coexistence = first(Coexistence),
+    N_cam = first(n_cam),
+    EffortRev = first(effort_rev),
+    EffortSpecies = first(effort_sp_level),
+    EffortInd = first(effort_ind),
+    duration = sum(as.numeric(duration)),
+    long = first(Long),
+    lat = first(Lat),
+    Revision_ID = first(Revision),
+    Deployment_ID = first(Deployment_ID),
+    ID = first(ID),
+    TimestampIssue = first(TI)
+                              ) %>%
+  rename(AnimalSpecies = Sp1) %>%
+  data.frame()
 ```
 
-## 8. Fix Timestamp Issues
+## 9. Give final format to database for publication     - 1,704 rows
 ```{r }
-
-```
-## 9. Give final format for publication
-```{r }
-
-```
-
-## 
-
-## 9. Give final format to database for publication
-```{r }
-# -------  Give a Revision number for "plen" 
-#Filter only Pistacia lentiscus
-pistacia <- data8 %>%
-  filter(Plant == "plen") %>%
-  mutate(Revision_ID = pistacia_rev) #Run the code below to create pistacia revision
-
-#Create a revision number based on each visit to the field (based on the day from DateTime column) 
-date_string <- format(pistacia$DateTime, "%Y-%m-%d")
-revision_number <- match(date_string, unique(date_string))
-pistacia_rev <- paste("Rev", revision_number, sep = "")
-
-#Remove plen from data8 and join it again with the new revision column.
-data9 <- data8 %>%
-  filter(Plant != "plen") %>%
-  bind_rows(pistacia)
-
-# ---------  Add a 0 to all Corema Plant_IDs for consistency with the rest of species "Calb001" instead of "Calb01"
-data10 <- data9 %>%
-  mutate(Plant_ID = str_replace_all(Plant_ID, "calb", "calb0"),
-         Revision_ID = str_to_sentence(Revision_ID))
-
-# --------  Change Plant species acronyms for the entire scientific name and change colnames
-data11 <- data10 %>%
-  mutate(Plant = str_replace_all(Plant, "aspa" , "Asparagus aphyllus"),
-         Plant = str_replace_all(Plant, "aune" , "Arbutus unedo"),
-         Plant = str_replace_all(Plant, "calb" , "Corema album"),
-         Plant = str_replace_all(Plant, "joxy" , "Juniperus oxycedrus"),
-         Plant = str_replace_all(Plant, "jpho" , "Juniperus phoenicea"),
-         Plant = str_replace_all(Plant, "mcom" , "Myrtus communis"),
-         Plant = str_replace_all(Plant, "oeur" , "Olea europaea"),
-         Plant = str_replace_all(Plant, "olan" , "Osyris lanceolata"),
-         Plant = str_replace_all(Plant, "pbou" , "Pyrus bourgeana"),
-         Plant = str_replace_all(Plant, "plen" , "Pistacia lentiscus"),
-         Plant = str_replace_all(Plant, "rper" , "Rubia peregrina"),
-         Plant = str_replace_all(Plant, "rulm" , "Rubus ulmifolius"),
-         Plant = str_replace_all(Plant, "sasp" , "Smilax aspera"),
-         Sp1 = str_to_sentence(Sp1),
-         Sp1 = str_replace_all(Sp1, "Rattus", "Rattus rattus")) %>%
-    rename(AnimalSpecies = Sp1, PlantSpecies = Plant, PlantID = Plant_ID, RevisionID = Revision_ID, NCam = n_cam, EffortRev = Days, Duration = duration, EffortSpecies = effort_pl_sp, EffortInd = effort_ind, Longitude = Long, Latitude = Lat) %>%
-  select(-c(Days.in.field, ID))
-
-# -------- Rule for Behavior (If there are more than one behaviors in a collapsed observation we choose the most frugivor related one i.e eating > prob. eating > searching for food)
-#a - eating
-#b - probably eating
-#c - searching for food
-
-data12 <- data11 %>%
+# -Rule for Behavior (If there are more than one behavior in a collapsed event we choose the alternative according to the following order: 1. eating > 2. prob. eating > 3. searching for food)
+df2 <- Aune_collapsed %>%
   mutate(Behav = Behaviour,
-         Behav = str_replace_all(Behav, "feeding", "eating"),
          Behav = str_replace_all(Behav, "probably eating", "b"),
-         Behav = str_replace_all(Behav, "prob_eating", "b"),
          Behav = str_replace_all(Behav, "eating", "a"),
          Behav = str_replace_all(Behav, "searching for food", "c"),
          Behav = ifelse(grepl("a",Behav), "eating",Behav),
@@ -263,28 +160,23 @@ data12 <- data11 %>%
   select(-Behaviour) %>%
   rename(Behaviour = Behav)
 
-# -------- Unify decimal numbers for each column
-data13 <- data12 %>%
-  mutate(Duration = round(as.numeric(Duration), 1),
+# Unify decimal numbers
+df3 <- df2 %>%
+  mutate(duration = round(as.numeric(duration), 1),
          EffortRev = round(as.numeric(EffortRev), 2),
          EffortInd = round(as.numeric(EffortInd), 2), 
-         EffortSpecies = round(as.numeric(EffortSpecies), 2))
+         EffortSpecies = round(as.numeric(EffortSpecies), 2),
+         long = round(as.numeric(long), 5),
+         lat  = round(as.numeric(lat), 5))
 
-# -------- Fix Revision number format (add a 0 if the RevisionID mathces the pattern "Rev" followed by a single digit)
-data14 <- data13 %>%
-  mutate(RevisionID = case_when(
-    grepl("^Rev\\d$", RevisionID) ~ paste0("Rev0", substr(RevisionID, start = 4, stop = nchar(RevisionID))),
-    TRUE ~ RevisionID)) 
-
-# -------- Change names from Gr. Sylvia maintaining S.atricapilla and S.borin
-data15 <- data14 %>%
-  mutate(AnimalSpecies = str_replace_all(AnimalSpecies, "Sylvia", "Curruca"),
-         AnimalSpecies = str_replace_all(AnimalSpecies, "Curruca atricapilla", "Sylvia atricapilla"),
-         AnimalSpecies = str_replace_all(AnimalSpecies, "Curruca borin", "Sylvia borin"))
-
-#write.csv(data15, "/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Dataset_2023_07_19/DataS1_corrected_sylvia.csv")
+# Create SpeciesType column and final selection.
+df4 <- df3 %>%
+  mutate(SpeciesType = ifelse(grepl("Cervus|Sus|Meles|Vulpes|Genetta|Herpestes", AnimalSpecies, ignore.case = TRUE), "Mammal", "Bird")) %>%
+  select(PlantSp, Plant_ID, AnimalSpecies, DateTime, Behaviour, Coexistence, N_cam, EffortRev, EffortSpecies, EffortInd, duration, long, lat, SpeciesType)
 
 ```
+
+
 
 
 
