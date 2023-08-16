@@ -183,13 +183,6 @@ df4 <- df3 %>%
   mutate(SpeciesType = ifelse(grepl("Cervus|Sus|Meles|Vulpes|Genetta|Herpestes", AnimalSpecies, ignore.case = TRUE), "Mammal", "Bird")) %>%
   select(PlantSp, Plant_ID, AnimalSpecies, DateTime, Behaviour, Coexistence, N_cam, EffortRev, EffortSpecies, EffortInd, duration, long, lat, SpeciesType)
 
-
-sort(unique(df4$Coexistence))
-
-df4 %>%
-  group_by(Coexistence)%>%
-  summarise(n =n())
-
 ```
 
 
