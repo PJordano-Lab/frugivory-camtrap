@@ -6,17 +6,23 @@ output: html_document
 ---
 The provided script illustrates the workflow employed to compile the data produced by camera traps for ecological interactions in the data paper "Frugivory-camtrap". Note that this example uses data from the plant species "Arbutus unedo" during the monitoring of the second fruiting season (2022-2023). The input file is a plain text (csv) generated after visualizing and tagging in TimeLapse visualization program (Greenberg, 2020) and after a Megadetector (Beery et al. 2019) run to remove blank videos.   
 
-Libraries
-```{r}
+
+Libraries and directory.
+```{r , include=FALSE}
+library(here)
 library(dplyr)
 library(stringr)
 library(lubridate)
+
+knitr::opts_chunk$set(echo = TRUE)
+folder <- here("Code/example_raw_data")
 ```
+
 # 1. SAMPLING EFFORT 
 ## 1.1. Read the data with sampling efforts from camera trap survey
 ```{r }
 #Sampling effort data for Arbutus unedo (second fruiting season)
-sampling_effort <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/sampling_effort.csv")
+sampling_effort <- read.csv(file.path(folder, "sampling_effort.csv"))
 ```
 
 ## 1.2. GROUP effort for plant species level and for individual plant level 
@@ -42,13 +48,13 @@ eff_rev <- data.frame(sampling_effort %>%
 ## 1. Load video level data                             - 10,827 rows 
 The data is the output after the visualization with TimeLapse.
 ```{r }
-Aune_data <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/example_dataset.csv")
+Aune_data <-  read.csv(file.path(folder, "example_dataset.csv"))
 ```
 
 ## 2. Include video duration                            - 10,827 rows
 ```{r }
 #Summary list of file metadata extracted from Hard drive files
-file_info <- read.csv ("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/file_info.csv") %>%
+file_info <- read.csv(file.path(folder, "file_info.csv"))  %>%
   select(Path, duration)
 
 #join data and file list
@@ -68,7 +74,7 @@ Aune_dat_effort <- Aune_dat %>%
 
 ## 4. Include coordinates                               - 10,827 rows
 ```{r }
-coord <- read.csv("/Users/Pablo/Documents/GitHub/donana-frugivory-camtrap/Code/data_example_raw_data/coordinates.csv") 
+coord <- read.csv(file.path(folder, "coordinates.csv"))
 
 Aune_dat_coord <- Aune_dat_effort %>%
   left_join(coord, by = "Plant_ID")
@@ -80,15 +86,15 @@ Aune_eating <- Aune_dat_coord %>%
   filter(Behaviour == "eating"| Behaviour == "probably eating" | Behaviour == "searching for food")
 ```
 
-## 6. Split entries with two species                    - 2,638 rows
+## 6. Split entries with two species                    - 2,724 rows
 We will duplicate the entries where there are two species (SP2 = "non empty") and rename Sp1 with Sp2 name. The rest of the columns will maintain invariable (traceable through Plant_ID/Rev/File). A new column "Coexistence" will be created for searching events with more than one species.
 ```{r }
-# Rows with only one species  - 2,576 row
+# Videos containing one species alone  - 2,576 row
 rows_wo_sp2 <- Aune_eating %>%
  filter(is.na(Sp2) | nchar(Sp2) == 0) %>%
   mutate(Coexistence = FALSE)
 
-# Rows with two species: change Sp2 to Sp1 - 62 rows (Duplicate rows based on Sp2 and Behaviour2 conditions) 
+# Videos containing two different species: here we change Sp2 to Sp1 - 62 rows (Duplicate rows based on Sp2 and Behaviour2 conditions) 
 new_rows_for_sp2 <- Aune_eating %>%
   filter(!is.na(Sp2) & nchar(Sp2) > 0 & Behaviour2 %in% c("eating", "probably eating", "searching for food")) %>%
   mutate(Sp1 = Sp2,
@@ -96,12 +102,16 @@ new_rows_for_sp2 <- Aune_eating %>%
          Behaviour = Behaviour2,
          Coexistence = TRUE)
 
+new_rows_for_sp1 <- Aune_eating %>%
+  filter(!is.na(Sp2) & nchar(Sp2) > 0 & Behaviour %in% c("eating", "probably eating", "searching for food")) %>%
+  mutate(Coexistence = TRUE)
+
 # Combine the original data with the duplicated rows should be 2,638 rows
-Aune_split <- bind_rows(rows_wo_sp2 , new_rows_for_sp2) %>%
+Aune_split <- bind_rows(rows_wo_sp2 , new_rows_for_sp2, new_rows_for_sp1) %>%
   select(!c (Sp2, Count2, Behaviour2)) 
 ```
 
-## 7. Remove unknown species and correct inconsitencies - 2,628 rows
+## 7. Remove unknown species and correct inconsitencies - 2,712 rows
 ```{r}
 #Remove unknown species and correct some inconsistent names for Sp1
 df1 <- Aune_split %>%
@@ -115,7 +125,7 @@ df1$Sp1 [df1$Sp1 == "Turdus me" ] <- "Turdus merula"
 df1$Sp1 [df1$Sp1 == "Sylvia melanocephala" ] <- "Curruca melanocephala"
 ```
 
-## 8. Collapse videos into 5 min events                 - 1,704 rows
+## 8. Collapse videos into 5 min events                 - 1,758 rows
 ```{r}
 Aune_collapsed <- df1 %>%
   group_by(Plant_ID, Revision) %>%
@@ -139,14 +149,13 @@ Aune_collapsed <- df1 %>%
     lat = first(Lat),
     Revision_ID = first(Revision),
     Deployment_ID = first(Deployment_ID),
-    ID = first(ID),
-    TimestampIssue = first(TI)
+    ID = first(ID)
                               ) %>%
   rename(AnimalSpecies = Sp1) %>%
   data.frame()
 ```
 
-## 9. Give final format to database for publication     - 1,704 rows
+## 9. Give final format to database for publication     - 1,758 rows
 ```{r }
 # -Rule for Behavior (If there are more than one behavior in a collapsed event we choose the alternative according to the following order: 1. eating > 2. prob. eating > 3. searching for food)
 df2 <- Aune_collapsed %>%
@@ -173,6 +182,13 @@ df3 <- df2 %>%
 df4 <- df3 %>%
   mutate(SpeciesType = ifelse(grepl("Cervus|Sus|Meles|Vulpes|Genetta|Herpestes", AnimalSpecies, ignore.case = TRUE), "Mammal", "Bird")) %>%
   select(PlantSp, Plant_ID, AnimalSpecies, DateTime, Behaviour, Coexistence, N_cam, EffortRev, EffortSpecies, EffortInd, duration, long, lat, SpeciesType)
+
+
+sort(unique(df4$Coexistence))
+
+df4 %>%
+  group_by(Coexistence)%>%
+  summarise(n =n())
 
 ```
 
