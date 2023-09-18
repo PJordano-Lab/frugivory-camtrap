@@ -1,9 +1,15 @@
 # donana-frugivory-camtrap
 A dataset of foraging ecological interactions recorded with camera traps in the Doñana National Park
 
-This is a public repository for the data and code included in our data paper:
+This is a public repository for the data and code included in the data paper:
+"FRUGIVORY CAMTRAPS: A dataset of frugivory interactions recorded with camera traps"
 
-Title: doñana frugivory camtra
+The goal of donana-frugivory-camtrap repository is to contain and facilitate access to the data, code and metadata associated to the datapaer published in Ecology in DATE. 
+
+The repository contains a folder containing the complete dataset in csv format. The datset will be updated with new data when available and the folder will contain the date for the last version. The code folder contains a toy dataset .Rmd that illustrates the process for assembling the dataset with the raw data nedded for running it. In the code folder there is a secon .Rmd code for creating the figures contained in the Metadata section of the manuscript. Finally,the metadata folder contains ????? no contiene nada de valor, no??    
+
+....keep on here 
+
 
 Authors:
 Pablo Villalva1, Gemma Calvo1, Pablo Homet1, Jorge Isla1, Eva Moracho1, Elena Quintero1, Blanca Arroyo-Correa1, Francisco Rodríguez-Sánchez2, Irene Mendoza1, Pedro Jordano1,2 
