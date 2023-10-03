@@ -2,7 +2,9 @@
 .Rhistory
 .Rapp.history
 
-.DS_Store
+/*DS_Store
+/Code/.DS_Store
+/Metadata/.DS_Store
 
 # Session Data files
 .RData
@@ -38,6 +40,3 @@ EPFL-Sweave-powerdot.pdf
 /Refs-pdfs
 *.itmsp
 
-UsingiTunesProducerFreeBooks.pdf
-.Rproj.user
-code/data/.DS_Store
