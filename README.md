@@ -5,7 +5,7 @@ Title: "FRUGIVORY CAMTRAPS: A dataset of frugivory interactions recorded with ca
 
 The goal of donana-frugivory-camtrap repository is to contain and facilitate access to the data, code and metadata associated to the datapaper published in Ecology. 
 
-The folder nemed "dataset_date" contains the complete dataset in csv format. The datset will be updated with new field data when available and the folder will contain the date for the last version. The folder named "code" contains a toy dataset and code for ilustrating the assembling process for this dataset. In this folder you can find the raw data for running. In the code folder you will also find the code for creating the figures contained in the Metadata section of the manuscript.   
+The folder nemed "dataset_YYYY_mm_dd" contains the complete dataset in csv format. The datset will be updated with new field data when available and the folder will contain the date for the last version. The folder named "code" contains a toy dataset and code for ilustrating the assembling process for this dataset. In this folder you can find the raw data for running. In the code folder you will also find the code for creating the figures contained in the Metadata section of the manuscript.   
 
 Authors:
 Pablo Villalva1, Gemma Calvo1, Pablo Homet1, Jorge Isla1, Eva Moracho1, Elena Quintero1, Blanca Arroyo-Correa1, Francisco Rodríguez-Sánchez2, Irene Mendoza1, Pedro Jordano1,2 
