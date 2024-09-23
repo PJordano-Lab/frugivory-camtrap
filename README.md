@@ -1,6 +1,6 @@
 # FRUGIVORY CAMTRAP
 
-The goal of the frugivory-camtrap repository is to contain and facilitate access to the data, code and metadata associated to the datapaper published in _Ecology_. 
+The goal of the frugivory-camtrap repository is to contain and facilitate access to the data, code and metadata associated to the datapaper published in _Ecology_ (https://doi.org/10.1002/ecy.4424). 
 
 The folder named "dataset_YYYY_mm_dd" contains the complete dataset in csv format. The dataset will be updated with new field data when available and the folder will contain the date for the last version. The folder named "code" contains a toy dataset for ilustrating the assembling process of the dataset. In this folder you can also find the code for running it. In the code folder you will also find the code for creating the figures contained in the Metadata section of the manuscript.   
 
